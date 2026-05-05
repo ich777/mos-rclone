@@ -1,0 +1,9 @@
+#!/bin/bash
+if [ ! -f /boot/optional/plugins/rclone/rclone.conf ] ; then
+  if [ ! -d /boot/optional/plugins/rclone ]; then
+    mkdir -p /boot/optional/plugins/rclone
+  fi
+  touch /boot/optional/plugins/rclone/rclone.conf
+fi
+
+/usr/bin/rcloneorig --config /boot/optional/plugins/rclone/rclone.conf "$@";

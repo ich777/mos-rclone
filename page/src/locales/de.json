@@ -1,0 +1,31 @@
+{
+  "plugin_rclone": {
+    "title": "rclone",
+    "description": "Verwalten von rclone - Cloud-Speicher Sync und Mount",
+    "status": "Status",
+    "version": "Version:",
+    "latest_version": "Neueste Version:",
+    "running": "Läuft",
+    "not_running": "Nicht aktiv",
+    "not_installed": "nicht installiert",
+    "install": "Installieren",
+    "check_updates": "Prüfen",
+    "update": "Aktualisieren",
+    "settings": "Einstellungen",
+    "auto_start": "Web GUI automatisch beim Boot starten",
+    "webui_port": "Web GUI Port",
+    "start": "Web GUI starten",
+    "stop": "Web GUI beenden",
+    "save": "Speichern",
+    "save_settings": "Einstellungen speichern",
+    "terminal": "rclone config",
+    "terminal_hint": "Interaktive rclone Remote-Konfiguration",
+    "terminal_not_available": "rclone ist noch nicht installiert. Bitte zuerst installieren.",
+    "open_terminal": "Terminal öffnen",
+    "close_terminal": "Terminal schließen",
+    "cancel": "Abbrechen",
+    "ok": "OK",
+    "open_webui": "Web GUI öffnen",
+    "default_port_hint": "Standard: {port}"
+  }
+}

@@ -1,0 +1,193 @@
+#!/bin/bash
+
+# Import MOS functions
+. /usr/local/lib/functions/mos-common
+
+# Set HEADER if GitHub Token was specified
+GH_TOKEN=$(jq -r '.github // empty' /boot/config/system/tokens.json 2>/dev/null)
+if [ ! -z "$GH_TOKEN" ] ; then
+  TOKEN="$(decrypt_password "$GH_TOKEN" "tokens")"
+  HEADER=(--header "Authorization: Bearer $TOKEN")
+else
+  HEADER=()
+fi
+
+# Set Variables
+PLG_DIR="/boot/optional/plugins/rclone"
+PID_FILE="/var/run/mos-rclone.pid"
+
+# Function to get latest version from rclone
+get_latest_version() {
+  local TAGS
+  local VERSION
+
+  TAGS=$(curl -s "${HEADER[@]}" "https://api.github.com/repos/rclone/rclone/releases/latest" 2>/dev/null)
+  VERSION=$(echo "$TAGS" | jq -r '.tag_name // empty' 2>/dev/null)
+
+  if [ -z "$VERSION" ]; then
+    VERSION=$(echo "$TAGS" | jq -r '.name // empty' 2>/dev/null)
+  fi
+
+  if [ -z "$VERSION" ] ; then
+    echo "v0"
+  else
+    echo "$VERSION"
+  fi
+}
+
+case "$1" in
+  check_version)
+    CURRENT_VERSION=$(jq -r '.version // empty' "$PLG_DIR/settings.json" 2>/dev/null)
+    if [ -z "$CURRENT_VERSION" ] ; then
+      CURRENT_VERSION="not installed"
+    fi
+
+    LATEST_VERSION=$(get_latest_version)
+
+    if [ "$CURRENT_VERSION" = "not installed" ] || [ "$CURRENT_VERSION" != "$LATEST_VERSION" ] ; then
+      echo "{\"current\":\"$CURRENT_VERSION\",\"latest\":\"$LATEST_VERSION\",\"update_available\":true}"
+    else
+      echo "{\"current\":\"$CURRENT_VERSION\",\"latest\":\"$LATEST_VERSION\",\"update_available\":false}"
+    fi
+  ;;
+
+  install_binary)
+    mkdir -p "$PLG_DIR"
+
+    ARCHITECTURE=$(uname -m)
+    if [ "$ARCHITECTURE" = "x86_64" ] ; then
+      ARCHITECTURE="amd64"
+    elif [ "$ARCHITECTURE" = "aarch64" ] ; then
+      ARCHITECTURE="arm64"
+    fi
+
+    VERSION=$(get_latest_version)
+    URL="https://github.com/rclone/rclone/releases/download/${VERSION}/rclone-${VERSION}-linux-${ARCHITECTURE}.zip"
+    ZIP_FILE="$PLG_DIR/rclone.zip"
+
+    echo "Downloading rclone"
+    echo "Architecture: $ARCHITECTURE"
+
+    if wget -q "$URL" -O "$ZIP_FILE" ; then
+      if [ -f "$ZIP_FILE" ] && [ -s "$ZIP_FILE" ] ; then
+        echo "Extracting..."
+        TMP_DIR=$(mktemp -d)
+        unzip -q "$ZIP_FILE" -d "$TMP_DIR"
+        cp "$TMP_DIR/rclone-${VERSION}-linux-${ARCHITECTURE}/rclone" "$PLG_DIR/rcloneorig"
+        chmod +x "$PLG_DIR/rcloneorig"
+        rm -rf "$TMP_DIR"
+        rm -f "$ZIP_FILE"
+
+        # Copy to /usr/bin
+        cp "$PLG_DIR/rcloneorig" /usr/bin/rcloneorig
+        chmod +x /usr/bin/rcloneorig
+
+        jq ".version = \"$VERSION\"" "$PLG_DIR/settings.json" > "$PLG_DIR/settings.json.tmp"
+        mv "$PLG_DIR/settings.json.tmp" "$PLG_DIR/settings.json"
+
+        echo "Installed $VERSION"
+      else
+        rm -f "$ZIP_FILE"
+        echo "Downloaded file is empty"
+        exit 1
+      fi
+    else
+      rm -f "$ZIP_FILE"
+      echo "Failed to download"
+      exit 1
+    fi
+  ;;
+
+  start)
+    if [ -f "$PID_FILE" ] ; then
+      OLDPID=$(cat "$PID_FILE" 2>/dev/null)
+      if [ -n "$OLDPID" ] && kill -0 "$OLDPID" 2>/dev/null ; then
+        echo "Already running (PID: $OLDPID)"
+        exit 0
+      fi
+      rm -f "$PID_FILE"
+    fi
+
+    if [ ! -f /usr/bin/rcloneorig ] ; then
+      echo "rclone binary not found"
+      exit 1
+    fi
+
+    WEBUI_PORT=$(jq -r '.webui_port // "5572"' "$PLG_DIR/settings.json" 2>/dev/null)
+    WEBUI="--rc-web-gui --rc-addr :${WEBUI_PORT} --rc-no-auth"
+
+
+    nohup /usr/bin/rcloneorig rcd \
+      --config "$PLG_DIR/rclone.conf" \
+      $WEBUI > /dev/null 2>&1 &
+    NEWPID=$!
+    echo $NEWPID > "$PID_FILE"
+    sleep 0.5
+    if kill -0 $NEWPID 2>/dev/null ; then
+      echo "Started (PID: $NEWPID)"
+    else
+      rm -f "$PID_FILE"
+      echo "Failed to start"
+      exit 1
+    fi
+  ;;
+
+  stop)
+    if [ -f "$PID_FILE" ]; then
+      PID=$(cat "$PID_FILE" 2>/dev/null)
+      if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null ; then
+        kill "$PID" 2>/dev/null
+        sleep 1
+        kill -9 "$PID" 2>/dev/null
+      fi
+      rm -f "$PID_FILE"
+      echo "Stopped"
+    else
+      echo "Not running"
+    fi
+  ;;
+
+  restart)
+    if [ -f "$PID_FILE" ] ; then
+      PID=$(cat "$PID_FILE" 2>/dev/null)
+      if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
+        kill "$PID" 2>/dev/null
+        sleep 1
+        kill -9 "$PID" 2>/dev/null
+      fi
+      rm -f "$PID_FILE"
+    fi
+
+    if [ -f /usr/bin/rcloneorig ] ; then
+      WEBUI_PORT=$(jq -r '.webui_port // "5572"' "$PLG_DIR/settings.json" 2>/dev/null)
+      WEBUI="--rc-web-gui --rc-addr :${WEBUI_PORT} --rc-no-auth"
+
+      nohup /usr/bin/rcloneorig rcd \
+        --config "$PLG_DIR/rclone.conf" \
+        $WEBUI > /dev/null 2>&1 &
+      NEWPID=$!
+      echo $NEWPID > "$PID_FILE"
+      sleep 0.5
+      if kill -0 $NEWPID 2>/dev/null ; then
+        echo "Restarted (PID: $NEWPID)"
+      else
+        rm -f "$PID_FILE"
+        echo "Failed to restart"
+        exit 1
+      fi
+    fi
+  ;;
+
+  status)
+    RUNNING="false"
+
+    if [ -f "$PID_FILE" ]; then
+      PID=$(cat "$PID_FILE" 2>/dev/null)
+      if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null ; then
+        RUNNING="true"
+      fi
+    fi
+
+    echo "{\"running\":$RUNNING}"
+  ;;
+esac

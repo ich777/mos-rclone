@@ -1,0 +1,31 @@
+{
+  "plugin_rclone": {
+    "title": "rclone",
+    "description": "Manage rclone - cloud storage sync and mount",
+    "status": "Status",
+    "version": "Version:",
+    "latest_version": "Latest Version:",
+    "running": "Running",
+    "not_running": "Not Running",
+    "not_installed": "not installed",
+    "install": "Install",
+    "check_updates": "Check for Updates",
+    "update": "Update",
+    "settings": "Settings",
+    "auto_start": "Auto-start Web GUI on boot",
+    "webui_port": "Web GUI Port",
+    "start": "Start Web GUI",
+    "stop": "Stop Web GUI",
+    "save": "Save",
+    "save_settings": "Save Settings",
+    "terminal": "rclone config",
+    "terminal_hint": "Interactive rclone remote configuration",
+    "terminal_not_available": "rclone is not installed yet. Please install it first.",
+    "open_terminal": "Open Terminal",
+    "close_terminal": "Close Terminal",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "open_webui": "Open Web GUI",
+    "default_port_hint": "Default: {port}"
+  }
+}
