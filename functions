@@ -5,6 +5,7 @@ PLG_DIR="/boot/optional/plugins/rclone"
 install() {
   if [ -f "/boot/optional/uninstalled/rclone/rclone.conf" ] ; then
     mv /boot/optional/uninstalled/rclone/rclone.conf "$PLG_DIR/rclone.conf"
+    rm -rf /boot/optional/uninstalled/rclone
   fi
 }
 
