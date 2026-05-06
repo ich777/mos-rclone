@@ -69,7 +69,7 @@ jobs:
           # Copy Vue plugin
           cp -R page/dist/rclone/* ${PKG_DIR}/var/www/mos-plugins/rclone/
 
-          cp icon.png ${PKG_DIR}/var/www/mos-plugins/nvidia-driver/
+          cp icon.png ${PKG_DIR}/var/www/mos-plugins/rclone/
 
           # Create DEBIAN control file
           cat > ${PKG_DIR}/DEBIAN/control << EOF
