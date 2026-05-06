@@ -1,9 +1,17 @@
 #!/bin/bash
 
+PLG_DIR="/boot/optional/plugins/rclone"
+
+install() {
+  if [ -f "/boot/optional/uninstalled/rclone/rclone.conf" ] ; then
+    mv /boot/optional/uninstalled/rclone/rclone.conf "$PLG_DIR/rclone.conf"
+  fi
+}
+
 uninstall() {
-  if [ -f /var/run/mos-rclone.pid ]; then
+  if [ -f /var/run/mos-rclone.pid ] ; then
     PID=$(cat /var/run/mos-rclone.pid 2>/dev/null)
-    if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
+    if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null ; then
       kill "$PID" 2>/dev/null
       sleep 1
       kill -9 "$PID" 2>/dev/null
@@ -12,29 +20,34 @@ uninstall() {
   fi
 
   rm -f /usr/bin/rcloneorig
+
+  # Move rclone.config to secure place
+  [ ! -d "/boot/optional/uninstalled/rclone" ] && \
+    mkdir -p /boot/optional/uninstalled/rclone
+
+  cp "$PLG_DIR/rclone.conf" /boot/optional/uninstalled/rclone/rclone.conf
 }
 
 mos_start() {
   PLG_DIR="/boot/optional/plugins/rclone"
 
-  if [ -f "$PLG_DIR/bin/rclone" ]; then
+  if [ -f "$PLG_DIR/bin/rclone" ] ; then
     cp "$PLG_DIR/bin/rclone" /usr/bin/rcloneorig
     chmod +x /usr/bin/rcloneorig
   fi
 
-  if [ ! -f "$PLG_DIR/rclone.conf" ]; then
+  if [ ! -f "$PLG_DIR/rclone.conf" ] ; then
     mkdir -p "$PLG_DIR"
     touch "$PLG_DIR/rclone.conf"
   fi
 }
 
 mos_start_after_services() {
-  PLG_DIR="/boot/optional/plugins/rclone"
   PLG_SETTINGS=$(cat "$PLG_DIR/settings.json" 2>/dev/null)
   AUTO_START=$(echo "$PLG_SETTINGS" | jq -r '.auto_start // false')
 
-  if [ "$AUTO_START" == "true" ]; then
-    if [ -f /usr/bin/rcloneorig ]; then
+  if [ "$AUTO_START" == "true" ] ; then
+    if [ -f /usr/bin/rcloneorig ] ; then
       WEBUI_PORT=$(echo "$PLG_SETTINGS" | jq -r '.webui_port // "5572"')
       WEBUI="--rc-web-gui --rc-addr :${WEBUI_PORT} --rc-no-auth"
 
@@ -44,7 +57,7 @@ mos_start_after_services() {
       PID=$!
       echo $PID > "/var/run/mos-rclone.pid"
       sleep 0.5
-      if kill -0 $PID 2>/dev/null; then
+      if kill -0 $PID 2>/dev/null ; then
         echo "Started rclone GUI (PID: $PID)"
       else
         rm -f "/var/run/mos-rclone.pid"
