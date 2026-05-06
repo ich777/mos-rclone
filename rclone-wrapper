@@ -6,4 +6,9 @@ if [ ! -f /boot/optional/plugins/rclone/rclone.conf ] ; then
   touch /boot/optional/plugins/rclone/rclone.conf
 fi
 
-/usr/bin/rcloneorig --config /boot/optional/plugins/rclone/rclone.conf "$@";
+if [ -f /usr/bin/rcloneorig ] ; then
+  exec /usr/bin/rcloneorig --config /boot/optional/plugins/rclone/rclone.conf "$@"
+else
+  echo "rclone not found, please visit the rclone Plugin page within the MOS WebUI"
+  exit 1
+fi
