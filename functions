@@ -32,10 +32,8 @@ uninstall() {
 mos_start() {
   PLG_DIR="/boot/optional/plugins/rclone"
 
-  if [ -f "$PLG_DIR/bin/rclone" ] ; then
-    cp "$PLG_DIR/bin/rclone" /usr/bin/rcloneorig
-    chmod +x /usr/bin/rcloneorig
-  fi
+  cp "$PLG_DIR/rcloneorig" /usr/bin/rcloneorig
+  chmod +x /usr/bin/rcloneorig
 
   if [ ! -f "$PLG_DIR/rclone.conf" ] ; then
     mkdir -p "$PLG_DIR"
